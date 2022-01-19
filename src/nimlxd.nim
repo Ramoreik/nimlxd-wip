@@ -32,12 +32,17 @@ proc main() =
     echo lxdc.start(instance).pretty()
 
     echo "[#] Executing - {whoami} -"
-    echo "[#] CMD : " 
-    echo lxdc.exec(
+    let (stdout, stderr) = lxdc.exec(
             instance,
             command = @["cat", "/etc/passwd"],
             record_output=true
-         ).pretty()
+         )
+
+    echo "[#] STDOUT : \n"
+    echo stdout
+
+    echo "[#] STDERR : \n"
+    echo stderr
 
     echo "[#] Creating backup - "
     echo lxdc.backup(instance, name = "dev-syz-bkp-1").pretty()

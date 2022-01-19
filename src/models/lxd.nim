@@ -101,14 +101,14 @@ proc unfreeze*(lxdc: LXDClient, i: Instance): JsonNode =
     result = lxdc.changeState(i, "unfreeze")
 
 
-# not working properly
+# refactor
 proc exec*(lxdc: LXDClient, i: Instance, project = "", 
             command: seq[string] = @["whoami"], cwd = "/",
             environment: Table[string, string] = {"foo": "bar"}.toTable,
             user = 1000, group = 1000,
             height = 24, width = 80,
             interactive = false, record_output = false,
-            wait_for_websocket = false): JsonNode =
+            wait_for_websocket = false): (string, string) =
     let content = %*
         {
           "command": command, 
@@ -124,18 +124,10 @@ proc exec*(lxdc: LXDClient, i: Instance, project = "",
         }
     let output = lxdc.interact(
                 parseUri(INSTANCES_EXEC_ENDPOINT % [i.name]) ? {"project": project},
-                HttpPost, $content, blocking = true
-            )
-    echo output
-
-    echo "[#] Getting stdin -"
-    let stdout = lxdc.interact(parseUri(output{"1"}.getStr()), HttpGet, "{}")
-
-    echo "[#] Getting stderr -"
-    let stderr = lxdc.interact(parseUri(output{"2"}.getStr()), HttpGet, "{}")
-    return stderr
-
-
+                HttpPost, $content, blocking = true){"metadata"}{"metadata"}{"output"}
+    let stdout = lxdc.api(parseUri(output{"1"}.getStr()), HttpGet, "{}").body
+    let stderr = lxdc.api(parseUri(output{"2"}.getStr()), HttpGet, "{}").body
+    return (stdout, stderr) 
 
 
 
