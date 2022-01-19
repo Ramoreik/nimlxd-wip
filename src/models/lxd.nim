@@ -1,7 +1,7 @@
 import uri
 import instance
 import constants
-import std/[strformat, strutils, json, os]
+import std/[tables, strformat, strutils, json, os]
 import monkeypatch/httpclient
 
 type 
@@ -15,10 +15,8 @@ proc newLXDClient*(): LXDClient =
     return LXDClient(client: c)
 
 
-proc interact*(lxdc: LXDClient, endpoint: string|Uri,
-               m: HttpMethod, body: string): Response =
-    echo fmt"[#] {endpoint} - {m}"
-    echo fmt"[?] REQ : " & "\n" & body
+proc api(lxdc: LXDClient, endpoint: string|Uri,
+         m: HttpMethod, body: string): Response = 
     let r = lxdc.client.request(
         parseUri(SOCK) / $endpoint,
         httpMethod = m,
@@ -26,17 +24,33 @@ proc interact*(lxdc: LXDClient, endpoint: string|Uri,
     )
     if r.status != Http202 and r.status != Http200:
         echo "[!!] ERROR: " & r.status & "\n" & r.body
-    echo "[?] RES: \n" & r.body
     return r
 
 
-proc wait(lxdc: LXDClient, operation: string) =
+proc interact*(lxdc: LXDClient, endpoint: string|Uri,
+               m: HttpMethod, body: string, blocking = false): JsonNode =
+    echo fmt"[#] {endpoint} - {m}"
+    echo fmt"[?] REQ : " & "\n" & body
+    var r = lxdc.api(endpoint, m, body)
+    if blocking:
+        let operation = parseJson(r.body){"operation"}.getStr()
+        r = lxdc.wait(operation)
+    result = try : 
+        parseJson(r.body)
+    except:
+        %*{"content": r.body}
+    return result
+
+
+proc wait(lxdc: LXDClient, operation: string): Response =
     echo fmt"[?] Waiting for operation : {operation}"
-    discard lxdc.interact(
+    return lxdc.api(
         parseUri(operation) / "wait" ? {"timeout": "15"},
             HttpGet, "{}")
 
-proc create*(lxdc: LXDClient, i: Instance) = 
+
+
+proc create*(lxdc: LXDClient, i: Instance): JsonNode = 
     let content = %*
         {
             "name": i.name,
@@ -47,21 +61,15 @@ proc create*(lxdc: LXDClient, i: Instance) =
                 "alias": i.alias
             }
         }   
-    let r = lxdc.interact(INSTANCES_ENDPOINT, HttpPost, $content)
-    let operation = parseJson(r.body){"operation"}.getStr()
-    lxdc.wait(operation)
+    return lxdc.interact(
+        INSTANCES_ENDPOINT, HttpPost, $content, blocking = true)
 
-
-proc delete*(lxdc: LXDClient, i: Instance) = 
-    let r = lxdc.interact(
-        parseUri(INSTANCES_ENDPOINT) / i.name,
-            HttpDelete, "{}")
-    let operation = parseJson(r.body){"operation"}.getStr()
-    lxdc.wait(operation)
-
+proc delete*(lxdc: LXDClient, i: Instance): JsonNode = 
+    return lxdc.interact(
+        parseUri(INSTANCES_ENDPOINT) / i.name, HttpDelete, "{}", blocking=true)
 
 proc changeState(lxdc: LXDClient, i: Instance, action: string,
-                 force=false, stateful=false, timeout=90) =
+                 force=false, stateful=false, timeout=90): JsonNode =
     let content = %*
         {
             "action": action,
@@ -69,49 +77,85 @@ proc changeState(lxdc: LXDClient, i: Instance, action: string,
             "stateful": stateful,
             "timeout": timeout
         }
-    let r = lxdc.interact(
+    return lxdc.interact(
         INSTANCES_STATE_ENDPOINT % [i.name],
         HttpPut,
-        $content
+        $content,
+        blocking = true
     )
-    let operation = parseJson(r.body){"operation"}.getStr()
-    lxdc.wait(operation)
 
-proc start*(lxdc: LXDClient, i: Instance) =
-    lxdc.changeState(i, "start")
 
-proc stop*(lxdc: LXDClient, i: Instance) =
-    lxdc.changeState(i, "stop")
+proc start*(lxdc: LXDClient, i: Instance): JsonNode =
+    result = lxdc.changeState(i, "start")
 
-proc restart*(lxdc: LXDClient, i: Instance) =
-    lxdc.changeState(i, "restart")
+proc stop*(lxdc: LXDClient, i: Instance): JsonNode =
+    result = lxdc.changeState(i, "stop")
 
-proc freeze*(lxdc: LXDClient, i: Instance) =
-    lxdc.changeState(i, "freeze")
+proc restart*(lxdc: LXDClient, i: Instance): JsonNode =
+    result = lxdc.changeState(i, "restart")
 
-proc unfreeze*(lxdc: LXDClient, i: Instance) =
-    lxdc.changeState(i, "unfreeze")
+proc freeze*(lxdc: LXDClient, i: Instance): JsonNode =
+    result = lxdc.changeState(i, "freeze")
 
-proc log*(lxdc: LXDClient, i: Instance, project = ""): string =
-    let r = lxdc.interact(
+proc unfreeze*(lxdc: LXDClient, i: Instance): JsonNode =
+    result = lxdc.changeState(i, "unfreeze")
+
+
+# not working properly
+proc exec*(lxdc: LXDClient, i: Instance, project = "", 
+            command: seq[string] = @["whoami"], cwd = "/",
+            environment: Table[string, string] = {"foo": "bar"}.toTable,
+            user = 1000, group = 1000,
+            height = 24, width = 80,
+            interactive = false, record_output = false,
+            wait_for_websocket = false): JsonNode =
+    let content = %*
+        {
+          "command": command, 
+          "cwd": cwd,
+          "environment": environment,
+          "group": group,
+          "height": height,
+          "interactive": interactive,
+          "record-output": record_output,
+          "user": user,
+          "wait-for-websocket": wait_for_websocket,
+          "width": width
+        }
+    let output = lxdc.interact(
+                parseUri(INSTANCES_EXEC_ENDPOINT % [i.name]) ? {"project": project},
+                HttpPost, $content, blocking = true
+            )
+    echo output
+
+    echo "[#] Getting stdin -"
+    let stdout = lxdc.interact(parseUri(output{"1"}.getStr()), HttpGet, "{}")
+
+    echo "[#] Getting stderr -"
+    let stderr = lxdc.interact(parseUri(output{"2"}.getStr()), HttpGet, "{}")
+    return stderr
+
+
+
+
+
+proc log*(lxdc: LXDClient, i: Instance, project = ""): JsonNode =
+    return lxdc.interact(
         parseUri(INSTANCES_CONSOLE_ENDPOINT % [i.name]) ? {"project": project},
         HttpGet, "{}")
-    return r.body
 
-proc clear*(lxdc: LXDClient, i: Instance, project = "") =
-    discard lxdc.interact(
+
+proc clear*(lxdc: LXDClient, i: Instance, project = ""): JsonNode =
+    return lxdc.interact(
         parseUri(INSTANCES_CONSOLE_ENDPOINT % [i.name]) ? {"project": project},
         HttpDelete, "{}")
+
  
 proc backups*(lxdc: LXDClient, i: Instance, project = ""): JsonNode =
-    let r = lxdc.interact(
+    return lxdc.interact(
         parseUri(INSTANCES_BACKUPS_ENDPOINT % [i.name]) ? {"project": project},
         HttpGet, "{}")
-    let rjson = try : 
-        parseJson(r.body)
-    except:
-        %*"{}"
-    return rjson
+
 
 proc backup*(lxdc: LXDClient, i: Instance,
             project = "", compression_algorithm = "gzip", container_only = false,
@@ -126,14 +170,15 @@ proc backup*(lxdc: LXDClient, i: Instance,
             "name": name,
             "optimized_storage": optimized_storage
         }
-    let r = lxdc.interact(
+    return lxdc.interact(
         parseUri(INSTANCES_BACKUPS_ENDPOINT % [i.name]) ? {"project": project},
-        HttpGet, "{}")
-    let rjson = try : 
-        parseJson(r.body)
-    except:
-        %*"{}"
-    return rjson
+        HttpPost, $content)
+
+
+proc delete(lxdc: LXDClient, i: Instance, backup: string): JsonNode =
+    return lxdc.interact(
+        parseUri(INSTANCES_ENDPOINT) / i.name,
+            HttpDelete, "{}", blocking = true)
 
 
 proc newInstance*(name="", kind="image", alias="kali", description="Default Instance"): Instance =

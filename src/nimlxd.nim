@@ -26,10 +26,26 @@ proc main() =
     var instance = newInstance(name="dev-xyz", alias="ubuntu/xenial/cloud")
 
     echo "[#] Creating Instance -"
-    lxdc.create(instance)
+    echo lxdc.create(instance).pretty()
 
     echo "[#] Starting Instance -"
-    lxdc.start(instance)
+    echo lxdc.start(instance).pretty()
+
+    echo "[#] Executing - {whoami} -"
+    echo "[#] CMD : " 
+    echo lxdc.exec(
+            instance,
+            command = @["cat", "/etc/passwd"],
+            record_output=true
+         ).pretty()
+
+    echo "[#] Creating backup - "
+    echo lxdc.backup(instance, name = "dev-syz-bkp-1").pretty()
+
+
+    echo "[#] Listing backups -"
+    echo lxdc.backups(instance).pretty()
+
 
     # necessary even if im waiting for the operation to finish.
     # gotta figure out why :(
@@ -39,13 +55,13 @@ proc main() =
     echo lxdc.log(instance)
 
     echo "[#] Clearing logs - "
-    lxdc.clear(instance)
+    echo lxdc.clear(instance).pretty()
 
     echo "[#] Stop Instance -"
-    lxdc.stop(instance)
+    echo lxdc.stop(instance).pretty()
 
     echo "[#] Deleting Instance"
-    lxdc.delete(instance)
+    echo lxdc.delete(instance).pretty()
 
 
 when isMainModule:
