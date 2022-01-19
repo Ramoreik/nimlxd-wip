@@ -903,6 +903,7 @@ proc newConnection(client: HttpClient | AsyncHttpClient,
           nativesockets.Port(80)
       else: nativesockets.Port(connectionUrl.port.parseInt)
 
+    ## ADDED unix socket support -- 
     when client is HttpClient:
       if url.scheme == "http+unix":
         client.socket = newSocket(AF_UNIX, SOCK_STREAM, IPPROTO_IP)
