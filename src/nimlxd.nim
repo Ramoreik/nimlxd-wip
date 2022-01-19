@@ -27,8 +27,26 @@ proc main() =
 
     echo "[#] Creating Instance -"
     lxdc.create(instance)
+
     echo "[#] Starting Instance -"
     lxdc.start(instance)
+
+    # necessary even if im waiting for the operation to finish.
+    # gotta figure out why :(
+    sleep(1000)
+
+    echo "[#] Fetching logs -"
+    echo lxdc.log(instance)
+
+    echo "[#] Clearing logs - "
+    lxdc.clear(instance)
+
+    echo "[#] Stop Instance -"
+    lxdc.stop(instance)
+
+    echo "[#] Deleting Instance"
+    lxdc.delete(instance)
+
 
 when isMainModule:
     main()

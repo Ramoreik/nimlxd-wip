@@ -1,3 +1,4 @@
+import uri
 import instance
 import constants
 import std/[strformat, strutils, json, os]
@@ -14,12 +15,12 @@ proc newLXDClient*(): LXDClient =
     return LXDClient(client: c)
 
 
-proc interact*(lxdc: LXDClient, endpoint: string,
+proc interact*(lxdc: LXDClient, endpoint: string|Uri,
                m: HttpMethod, body: string): Response =
     echo fmt"[#] {endpoint} - {m}"
     echo fmt"[?] REQ : " & "\n" & body
     let r = lxdc.client.request(
-        SOCK & endpoint,
+        parseUri(SOCK) / $endpoint,
         httpMethod = m,
         body = body 
     )
@@ -32,8 +33,8 @@ proc interact*(lxdc: LXDClient, endpoint: string,
 proc wait(lxdc: LXDClient, operation: string) =
     echo fmt"[?] Waiting for operation : {operation}"
     discard lxdc.interact(
-        operation & "/wait", HttpGet, "{}")
-
+        parseUri(operation) / "wait" ? {"timeout": "15"},
+            HttpGet, "{}")
 
 proc create*(lxdc: LXDClient, i: Instance) = 
     let content = %*
@@ -49,13 +50,24 @@ proc create*(lxdc: LXDClient, i: Instance) =
     let r = lxdc.interact(INSTANCES_ENDPOINT, HttpPost, $content)
     let operation = parseJson(r.body){"operation"}.getStr()
     lxdc.wait(operation)
-    sleep(200)
 
 
-proc start*(lxdc: LXDClient, i: Instance) =
+proc delete*(lxdc: LXDClient, i: Instance) = 
+    let r = lxdc.interact(
+        parseUri(INSTANCES_ENDPOINT) / i.name,
+            HttpDelete, "{}")
+    let operation = parseJson(r.body){"operation"}.getStr()
+    lxdc.wait(operation)
+
+
+proc changeState(lxdc: LXDClient, i: Instance, action: string,
+                 force=false, stateful=false, timeout=90) =
     let content = %*
         {
-            "action": "start"
+            "action": action,
+            "force": force,
+            "stateful": stateful,
+            "timeout": timeout
         }
     let r = lxdc.interact(
         INSTANCES_STATE_ENDPOINT % [i.name],
@@ -65,6 +77,31 @@ proc start*(lxdc: LXDClient, i: Instance) =
     let operation = parseJson(r.body){"operation"}.getStr()
     lxdc.wait(operation)
 
+proc start*(lxdc: LXDClient, i: Instance) =
+    lxdc.changeState(i, "start")
+
+proc stop*(lxdc: LXDClient, i: Instance) =
+    lxdc.changeState(i, "stop")
+
+proc restart*(lxdc: LXDClient, i: Instance) =
+    lxdc.changeState(i, "restart")
+
+proc freeze*(lxdc: LXDClient, i: Instance) =
+    lxdc.changeState(i, "freeze")
+
+proc unfreeze*(lxdc: LXDClient, i: Instance) =
+    lxdc.changeState(i, "unfreeze")
+
+proc log*(lxdc: LXDClient, i: Instance, project = ""): string =
+    let r = lxdc.interact(
+        parseUri(INSTANCES_CONSOLE_ENDPOINT % [i.name]) ? {"project": project},
+        HttpGet, "{}")
+    return r.body
+
+proc clear*(lxdc: LXDClient, i: Instance, project = "") =
+    let r = lxdc.interact(
+        parseUri(INSTANCES_CONSOLE_ENDPOINT % [i.name]) ? {"project": project},
+        HttpDelete, "{}")
 
 proc newInstance*(name="", kind="image", alias="kali", description="Default Instance"): Instance =
     return Instance(
