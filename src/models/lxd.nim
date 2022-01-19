@@ -99,9 +99,42 @@ proc log*(lxdc: LXDClient, i: Instance, project = ""): string =
     return r.body
 
 proc clear*(lxdc: LXDClient, i: Instance, project = "") =
-    let r = lxdc.interact(
+    discard lxdc.interact(
         parseUri(INSTANCES_CONSOLE_ENDPOINT % [i.name]) ? {"project": project},
         HttpDelete, "{}")
+ 
+proc backups*(lxdc: LXDClient, i: Instance, project = ""): JsonNode =
+    let r = lxdc.interact(
+        parseUri(INSTANCES_BACKUPS_ENDPOINT % [i.name]) ? {"project": project},
+        HttpGet, "{}")
+    let rjson = try : 
+        parseJson(r.body)
+    except:
+        %*"{}"
+    return rjson
+
+proc backup*(lxdc: LXDClient, i: Instance,
+            project = "", compression_algorithm = "gzip", container_only = false,
+            expires_at = "", instance_only = false, name = "backup0",
+            optimized_storage = true): JsonNode =
+    let content = %* 
+        {
+            "compression_algorithm": compression_algorithm,
+            "container_only": container_only,
+            "expires_at": expires_at,
+            "instance_only": instance_only,
+            "name": name,
+            "optimized_storage": optimized_storage
+        }
+    let r = lxdc.interact(
+        parseUri(INSTANCES_BACKUPS_ENDPOINT % [i.name]) ? {"project": project},
+        HttpGet, "{}")
+    let rjson = try : 
+        parseJson(r.body)
+    except:
+        %*"{}"
+    return rjson
+
 
 proc newInstance*(name="", kind="image", alias="kali", description="Default Instance"): Instance =
     return Instance(
