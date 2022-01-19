@@ -30,7 +30,7 @@ proc api(lxdc: LXDClient, endpoint: string|Uri,
 proc interact*(lxdc: LXDClient, endpoint: string|Uri,
                m: HttpMethod, body: string, blocking = false): JsonNode =
     echo fmt"[#] {endpoint} - {m}"
-    echo fmt"[?] REQ : " & "\n" & body
+    echo fmt"[?] REQ : " & "\n" & parseJson(body).pretty()
     var r = lxdc.api(endpoint, m, body)
     if blocking:
         let operation = parseJson(r.body){"operation"}.getStr()
@@ -51,16 +51,7 @@ proc wait(lxdc: LXDClient, operation: string): Response =
 
 
 proc create*(lxdc: LXDClient, i: Instance): JsonNode = 
-    let content = %*
-        {
-            "name": i.name,
-            "source": {
-                "type": i.kind,
-                "protocol": DOWNLOAD_PROTOCOL,
-                "server": IMAGES_REMOTE_SERVER,
-                "alias": i.alias
-            }
-        }   
+    let content = i.createJson()
     return lxdc.interact(
         INSTANCES_ENDPOINT, HttpPost, $content, blocking = true)
 
@@ -171,12 +162,3 @@ proc delete(lxdc: LXDClient, i: Instance, backup: string): JsonNode =
     return lxdc.interact(
         parseUri(INSTANCES_ENDPOINT) / i.name,
             HttpDelete, "{}", blocking = true)
-
-
-proc newInstance*(name="", kind="image", alias="kali", description="Default Instance"): Instance =
-    return Instance(
-        name: name,
-        kind: kind, 
-        alias: alias, 
-        description: description
-    )

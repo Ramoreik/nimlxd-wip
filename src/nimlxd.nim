@@ -57,7 +57,9 @@ proc main() =
     sleep(1000)
 
     echo "[#] Fetching logs -"
-    echo lxdc.log(instance)
+    let logs = lxdc.log(instance){"content"}
+    if logs != nil:
+        echo logs.getStr()
 
     echo "[#] Clearing logs - "
     echo lxdc.clear(instance).pretty()
