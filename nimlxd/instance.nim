@@ -1,6 +1,5 @@
-import json
-import std/tables
 import constants
+import std/[json, tables]
 
 type 
     Instance* = object

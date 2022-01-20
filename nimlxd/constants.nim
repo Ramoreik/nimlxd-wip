@@ -1,4 +1,4 @@
-import strformat
+import std/strformat
 
 const SOCK* = "http+unix://%2fvar%2fsnap%2flxd%2fcommon%2flxd%2funix.socket"
 const VERSION* = "1.0"

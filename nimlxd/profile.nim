@@ -1,5 +1,4 @@
-import json
-import std/tables
+import std/[json, tables]
 
 type 
     Profile* = object

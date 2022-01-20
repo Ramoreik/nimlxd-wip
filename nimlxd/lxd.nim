@@ -1,9 +1,6 @@
-import uri
-import profile
-import instance
-import constants
-import std/[tables, strformat, strutils, json, os]
 import monkeypatch/httpclient
+import profile, instance, constants
+import std/[uri, tables, strformat, strutils, json, os]
 
 type 
     ## LXDC
@@ -16,7 +13,7 @@ proc newLXDClient*(): LXDClient =
     var c = newHttpClient()
     c.headers = newHttpHeaders({
         "Content-Type": "application/json",
-        "User-Agent": "NimLXD/0.0"
+        "User-Agent": "NimLXD/0.1.0"
     })
     return LXDClient(client: c)
 
