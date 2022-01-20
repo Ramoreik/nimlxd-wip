@@ -11,6 +11,7 @@ My first goals are :
 
 - Interface with instances (excluding interactive for now, but it would be interesting)  
 - Interface with images  
+- Interface with Profiles
 - Interface with networks  
 - Add a fun layer of abstraction  
 - efficiently manage a moderate scale practice of LXD  
