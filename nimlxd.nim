@@ -1,4 +1,4 @@
-import models/[lxd, instance, profile]
+import nimlxd/[lxd, instance, profile]
 import std/[json, strutils, strformat, os, tables]
 #https://github.com/nim-lang/Nim/blob/version-1-6/lib/pure/httpcore.nim#L284
 
