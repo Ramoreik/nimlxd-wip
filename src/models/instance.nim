@@ -47,3 +47,4 @@ proc newInstance*(name="", kind="image", alias="kali/current/cloud",
         profiles: profiles,
         ephemeral: ephemeral
     )
+
