@@ -1,5 +1,5 @@
-import std/[json, strutils, strformat, os]
-import models/[lxd, instance, constants]
+import std/[json, strutils, strformat, os, tables]
+import models/[lxd, instance, constants, profile]
 #https://github.com/nim-lang/Nim/blob/version-1-6/lib/pure/httpcore.nim#L284
 
 #[ 
@@ -71,7 +71,54 @@ proc main() =
     echo lxdc.delete(instance).pretty()
 
 
+proc test_profile() =
+    let lxdc = newLXDClient()
+    let p = newProfile(
+        "flask",
+        config = {
+            "user.user-data": """
+#cloud-config
+package_update: true
+packages:
+  - python3
+  - python3-pip
+runcmd:
+  - pip install flask
+  - bash /setup.d/entrypoint.sh
+            """
+        }.toTable,
+        devices = {
+            "eth0": {
+              "name": "eth0",
+              "network": "lxdbr0",
+              "type": "nic"
+            }.toTable,
+            "root": {
+              "type": "disk",
+              "path": "/",
+              "pool": "default"
+            }.toTable
+        }.toTable)
+    echo lxdc.create(p).pretty()
+
+    echo "[#] Creating + Starting instance"
+    let i = newInstance(name = "test", profiles = @["flask"])
+    echo lxdc.create(i).pretty()
+    echo lxdc.start(i).pretty()
+
+    sleep(1000)
+
+    echo "[#] Stop + Delete instance .."
+    echo lxdc.stop(i).pretty()
+    echo lxdc.delete(i).pretty()
+
+    echo "[#] Delete profile .."
+    echo lxdc.delete(p).pretty()
+
+
+
 when isMainModule:
-    main()
+    test_profile()
+    # main()
 
 

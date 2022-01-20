@@ -21,13 +21,12 @@ type
 
 
 proc createJson*(i: Instance): JsonNode =
-    let content = %*
+    return %*
         {
             "name": i.name,
             "description": i.description,
             "ephemeral": i.ephemeral,
             "profiles" : i.profiles,
-            "devices": i.devices,
             "source": {
                 "type": i.kind,
                 "protocol": DOWNLOAD_PROTOCOL,
@@ -35,10 +34,8 @@ proc createJson*(i: Instance): JsonNode =
                 "alias": i.alias
             }
         }  
-    return content
 
-
-proc newInstance*(name="", kind="image", alias="kali",
+proc newInstance*(name="", kind="image", alias="kali/current/cloud",
                   description="Default Instance", ephemeral=false, profiles: seq[string] = @[],
                   devices={"root": {"path": "/", "pool": "default", "type": "disk"}.toTable}.toTable): Instance =
     return Instance(
