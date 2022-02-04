@@ -23,7 +23,8 @@ import std/[json, strutils, strformat, os, tables]
 proc main() =
     echo "[#] - - NimLXD -- >>--:>"
     echo "[#] Creating LXDC -"
-    var lxdc = newLXDClient()
+    var lxdc = newLXDClient(
+        api="http+unix://%2fvar%2fsnap%2flxd%2fcommon%2flxd%2funix.socket")
 
     echo "[#] Creating flask - profile"
     let p = newProfile(
@@ -98,6 +99,10 @@ proc main() =
 
     echo "[#] Deleting Instance"
     echo lxdc.delete(instance).pretty()
+
+    echo "[#] Deleting profile - "
+    echo lxdc.delete(p).pretty()
+
 
 when isMainModule:
     main()

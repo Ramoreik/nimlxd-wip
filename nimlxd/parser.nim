@@ -2,6 +2,9 @@ import json
 import parsetoml
 
 #[ 
+    Converts different TomlValuesRef into Nim types.
+    The TomlValueRef to Nested Table, proc is for this specific context and doesn't make much sense otherwise.
+    I should probably not use operators for this, but it's fun to see how easy it is in nim.
  ]#
 
 

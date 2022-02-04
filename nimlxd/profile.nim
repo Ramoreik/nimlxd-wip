@@ -1,6 +1,6 @@
-import parser
-import parsetoml
-import std/[json, tables]
+import lxd, parser, constants,
+       parsetoml, monkeypatch/httpclient
+import std/[uri, json, tables]
 
 type 
     Profile* = object
@@ -44,3 +44,60 @@ proc newProfile*(config: TomlValueRef): Profile =
         devices: @devices,
         used_by: @used_by
     )
+
+
+proc profiles*(lxdc: LXDClient): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT), HttpGet)
+
+
+proc get*(lxdc: LXDClient, p: Profile): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) / p.name, HttpGet)
+
+
+proc create*(lxdc: LXDClient, p: Profile): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) ,
+        HttpPost, $p.createJson(), blocking = true)
+
+
+proc create*(lxdc: LXDClient, profiles: seq[Profile]) = 
+    ## Delete a list of profiles
+    for p in profiles:
+        discard lxdc.create(p)
+
+
+proc delete*(lxdc: LXDClient, p: Profile): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) / p.name,
+        HttpDelete, blocking = true)
+
+
+proc delete*(lxdc: LXDClient, profiles: seq[Profile]) = 
+    for p in profiles:
+        discard lxdc.delete(p)
+
+
+proc rename*(lxdc: LXDClient, p: Profile, name: string): JsonNode =
+    let content = %*{
+        "name": name
+    }
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) / p.name,
+        HttpPost, $content, blocking = true)
+
+
+proc update*(lxdc: LXDClient, p: Profile): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) / p.name,
+        HttpPut, $p.createJson(), blocking = true)
+
+
+# Not tested
+proc partial_update*(lxdc: LXDClient, p: Profile): JsonNode =
+    return lxdc.interact(
+        parseUri(PROFILES_ENDPOINT) / p.name,
+        HttpPost, $p.createJson(), blocking = true)
+
+
