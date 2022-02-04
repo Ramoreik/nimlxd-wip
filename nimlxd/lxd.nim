@@ -69,11 +69,22 @@ proc create*(lxdc: LXDClient, i: Instance): JsonNode =
         INSTANCES_ENDPOINT, HttpPost, $content, blocking = true)
 
 
+
+proc create(lxdc: LXDClient, instances: seq[Instance]): seq[Instance] =
+  for i in instances:
+    discard lxdc.create(instance)
+
+
+
 proc delete*(lxdc: LXDClient, i: Instance): JsonNode = 
     ## Delete the specified instance
     return lxdc.interact(
         parseUri(INSTANCES_ENDPOINT) / i.name, HttpDelete, "{}", blocking=true)
 
+
+proc delete(lxdc: LXDClient, instances: seq[Instance]) =
+  for i in instances:
+    discard lxdc.delete(i)
 
 proc changeState(lxdc: LXDClient, i: Instance, action: string,
                  force=false, stateful=false, timeout=90): JsonNode =
@@ -97,8 +108,18 @@ proc start*(lxdc: LXDClient, i: Instance): JsonNode =
     result = lxdc.changeState(i, "start")
 
 
+proc start(lxdc: LXDClient, instances: seq[Instance]) =
+  for i in instances:
+    discard lxdc.start(i)
+
+
 proc stop*(lxdc: LXDClient, i: Instance): JsonNode =
     result = lxdc.changeState(i, "stop")
+
+
+proc stop(lxdc: LXDClient, instances: seq[Instance]) =
+  for i in instances:
+    discard lxdc.stop(i)
 
 
 proc restart*(lxdc: LXDClient, i: Instance): JsonNode =
@@ -207,10 +228,21 @@ proc create*(lxdc: LXDClient, p: Profile): JsonNode =
         HttpPost, $p.createJson(), blocking = true)
 
 
+proc create(lxdc: LXDClient, profiles: seq[Profile]) = 
+    ## Delete a list of profiles
+    for p in profiles:
+        discard lxdc.create(profile)
+
+
 proc delete*(lxdc: LXDClient, p: Profile): JsonNode =
     return lxdc.interact(
         parseUri(PROFILES_ENDPOINT) / p.name,
         HttpDelete, blocking = true)
+
+
+proc delete*(lxdc: LXDClient, profiles: seq[Profile]) = 
+    for p in profiles:
+        discard lxdc.delete(p)
 
 
 proc rename*(lxdc: LXDClient, p: Profile, name: string): JsonNode =
