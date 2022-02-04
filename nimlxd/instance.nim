@@ -1,4 +1,6 @@
+import parser
 import constants
+import parsetoml
 import std/[json, tables]
 
 type 
@@ -47,3 +49,16 @@ proc newInstance*(name="", kind="image", alias="kali/current/cloud",
         ephemeral: ephemeral
     )
 
+
+proc newInstance*(config: TomlValueRef): Instance = 
+    let profiles = config{"profiles"}.getElems()
+    let devices = config{"devices"}
+    return Instance(
+        name: config{"name"}.getStr("default"),
+        kind: config{"kind"}.getStr("image"),
+        alias: config{"alias"}.getStr("kali/current/cloud"),
+        description: config{"description"}.getStr(),
+        devices: @devices,
+        profiles: @profiles,
+        ephemeral: config{"ephemeral"}.getBool()
+    )

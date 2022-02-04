@@ -1,3 +1,4 @@
+import parsetoml
 import nimlxd/[lxd, instance, profile]
 import std/[json, strutils, strformat, os, tables]
 #https://github.com/nim-lang/Nim/blob/version-1-6/lib/pure/httpcore.nim#L284
@@ -100,7 +101,5 @@ proc main() =
 
 when isMainModule:
     main()
-
-
 
 export lxd, instance, profile

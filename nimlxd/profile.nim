@@ -1,3 +1,5 @@
+import parser
+import parsetoml
 import std/[json, tables]
 
 type 
@@ -29,3 +31,16 @@ proc newProfile*(name: string, config: Table[string, string],
             devices: devices,
             used_by: used_by
         )
+
+proc newProfile*(config: TomlValueRef): Profile = 
+    let 
+        devices = config{"devices"}
+        used_by = config{"used_by"}.getElems()
+        pconfig = config{"config"}.getTable()
+    return Profile(
+        name: config{"name"}.getStr("default"),
+        description: config{"description"}.getStr(),
+        config: @pconfig,
+        devices: @devices,
+        used_by: @used_by
+    )
