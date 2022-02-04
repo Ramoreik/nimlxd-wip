@@ -79,7 +79,7 @@ proc create*(lxdc: LXDClient, i: Instance): JsonNode =
 
 
 
-proc create*(lxdc: LXDClient, instances: seq[Instance]): seq[Instance] =
+proc create*(lxdc: LXDClient, instances: seq[Instance]) =
   for i in instances:
     discard lxdc.create(i)
 
