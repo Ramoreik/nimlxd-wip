@@ -72,7 +72,7 @@ proc create*(lxdc: LXDClient, i: Instance): JsonNode =
 
 proc create(lxdc: LXDClient, instances: seq[Instance]): seq[Instance] =
   for i in instances:
-    discard lxdc.create(instance)
+    discard lxdc.create(i)
 
 
 
@@ -85,6 +85,7 @@ proc delete*(lxdc: LXDClient, i: Instance): JsonNode =
 proc delete(lxdc: LXDClient, instances: seq[Instance]) =
   for i in instances:
     discard lxdc.delete(i)
+
 
 proc changeState(lxdc: LXDClient, i: Instance, action: string,
                  force=false, stateful=false, timeout=90): JsonNode =
@@ -231,7 +232,7 @@ proc create*(lxdc: LXDClient, p: Profile): JsonNode =
 proc create(lxdc: LXDClient, profiles: seq[Profile]) = 
     ## Delete a list of profiles
     for p in profiles:
-        discard lxdc.create(profile)
+        discard lxdc.create(p)
 
 
 proc delete*(lxdc: LXDClient, p: Profile): JsonNode =
